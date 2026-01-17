@@ -198,7 +198,8 @@
             gameInfo.textContent = 'Klicke auf "Spiel starten" um zu beginnen!';
             
             symbols.forEach(symbol => {
-                symbol.classList.remove('active', 'correct', 'wrong', 'disabled');
+                symbol.classList.remove('active', 'correct', 'wrong');
+                symbol.classList.add('disabled'); // Symbole deaktivieren
             });
             
             startBtn.disabled = false;
@@ -223,7 +224,7 @@
             isShowingSequence = true;
             isUserTurn = false;
             startBtn.disabled = true;
-            resetBtn.disabled = true;
+            resetBtn.disabled = false; // Neu starten Button aktivieren
             gameInfo.textContent = 'Merke dir die Sequenz...';
             message.textContent = '';
 
@@ -283,7 +284,7 @@
                 
                 setTimeout(() => {
                     startBtn.disabled = false;
-                    resetBtn.disabled = true;
+                    resetBtn.disabled = false; // Neu starten Button aktivieren
                     gameInfo.textContent = 'Klicke auf "Spiel starten" für eine neue Runde!';
                 }, 1500);
                 return;
@@ -317,6 +318,11 @@
         // Event Listener für Symbole
         symbols.forEach((symbol, index) => {
             symbol.addEventListener('click', () => handleSymbolClick(index));
+        });
+
+        // Symbole beim Laden der Seite deaktivieren
+        symbols.forEach(symbol => {
+            symbol.classList.add('disabled');
         });
     </script>
 </body>
