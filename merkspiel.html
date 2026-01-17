@@ -62,6 +62,8 @@
             justify-content: center;
             font-size: 2.5em;
             user-select: none;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
         }
 
         .symbol:hover:not(.disabled) {
@@ -89,6 +91,7 @@
         .symbol.disabled {
             cursor: not-allowed;
             opacity: 0.6;
+            pointer-events: none;
         }
 
         .controls {
@@ -259,9 +262,12 @@
 
         function handleSymbolClick(index) {
             if (!isUserTurn || isShowingSequence) return;
+            
+            const symbol = symbols[index];
+            // Zusätzliche Prüfung ob Symbol deaktiviert ist
+            if (symbol.classList.contains('disabled')) return;
 
             userSequence.push(index);
-            const symbol = symbols[index];
 
             // Visuelles Feedback
             symbol.classList.add('active');
@@ -315,9 +321,27 @@
             }
         }
 
-        // Event Listener für Symbole
+        // Event Listener für Symbole - sowohl für Click als auch Touch
         symbols.forEach((symbol, index) => {
-            symbol.addEventListener('click', () => handleSymbolClick(index));
+            let touchHandled = false;
+            
+            // Touch-Events für Tablets
+            symbol.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                if (!symbol.classList.contains('disabled')) {
+                    touchHandled = true;
+                    handleSymbolClick(index);
+                }
+            }, { passive: false });
+            
+            // Click-Events für Desktop
+            symbol.addEventListener('click', (e) => {
+                if (touchHandled) {
+                    touchHandled = false;
+                    return;
+                }
+                handleSymbolClick(index);
+            });
         });
 
         // Symbole beim Laden der Seite deaktivieren
