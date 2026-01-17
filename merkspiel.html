@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Merkspiel - Symbol Sequenz</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 600px;
+            width: 100%;
+            text-align: center;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+        }
+
+        .game-info {
+            margin-bottom: 30px;
+            font-size: 1.2em;
+            color: #666;
+        }
+
+        .symbols-container {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .symbol {
+            aspect-ratio: 1;
+            border-radius: 15px;
+            border: 3px solid #ddd;
+            background: #f5f5f5;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5em;
+            user-select: none;
+        }
+
+        .symbol:hover:not(.disabled) {
+            transform: scale(1.05);
+            border-color: #667eea;
+        }
+
+        .symbol.active {
+            background: #667eea;
+            border-color: #764ba2;
+            transform: scale(1.1);
+            box-shadow: 0 0 20px rgba(102, 126, 234, 0.6);
+        }
+
+        .symbol.correct {
+            background: #4caf50;
+            border-color: #45a049;
+        }
+
+        .symbol.wrong {
+            background: #f44336;
+            border-color: #da190b;
+        }
+
+        .symbol.disabled {
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+
+        .controls {
+            margin-top: 30px;
+        }
+
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            font-size: 1.2em;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+            margin: 10px;
+        }
+
+        button:hover:not(:disabled) {
+            transform: scale(1.05);
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .message {
+            margin-top: 20px;
+            font-size: 1.3em;
+            font-weight: bold;
+            min-height: 30px;
+        }
+
+        .message.success {
+            color: #4caf50;
+        }
+
+        .message.error {
+            color: #f44336;
+        }
+
+        .score {
+            font-size: 1.1em;
+            color: #666;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎯 Merkspiel</h1>
+        <div class="score">Runde: <span id="round">1</span> | Sequenzlänge: <span id="sequenceLength">3</span> | Richtige Sequenzen: <span id="score">0</span></div>
+        <div class="game-info" id="gameInfo">Klicke auf "Spiel starten" um zu beginnen!</div>
+        
+        <div class="symbols-container">
+            <div class="symbol" data-index="0">⭐</div>
+            <div class="symbol" data-index="1">🔵</div>
+            <div class="symbol" data-index="2">🔴</div>
+            <div class="symbol" data-index="3">🟢</div>
+            <div class="symbol" data-index="4">🟡</div>
+        </div>
+
+        <div class="controls">
+            <button id="startBtn" onclick="startGame()">Spiel starten</button>
+            <button id="resetBtn" onclick="resetGame()" disabled>Neu starten</button>
+        </div>
+
+        <div class="message" id="message"></div>
+    </div>
+
+    <script>
+        const symbols = document.querySelectorAll('.symbol');
+        const startBtn = document.getElementById('startBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const gameInfo = document.getElementById('gameInfo');
+        const message = document.getElementById('message');
+        const roundDisplay = document.getElementById('round');
+        const scoreDisplay = document.getElementById('score');
+        const sequenceLengthDisplay = document.getElementById('sequenceLength');
+
+        let sequence = [];
+        let userSequence = [];
+        let isShowingSequence = false;
+        let isUserTurn = false;
+        let currentRound = 1;
+        let score = 0;
+
+        function startGame() {
+            resetGame();
+            generateSequence();
+            showSequence();
+        }
+
+        function resetGame() {
+            sequence = [];
+            userSequence = [];
+            isShowingSequence = false;
+            isUserTurn = false;
+            currentRound = 1;
+            score = 0;
+            roundDisplay.textContent = currentRound;
+            scoreDisplay.textContent = score;
+            sequenceLengthDisplay.textContent = 3;
+            message.textContent = '';
+            message.className = 'message';
+            gameInfo.textContent = 'Klicke auf "Spiel starten" um zu beginnen!';
+            
+            symbols.forEach(symbol => {
+                symbol.classList.remove('active', 'correct', 'wrong', 'disabled');
+            });
+            
+            startBtn.disabled = false;
+            resetBtn.disabled = true;
+        }
+
+        function generateSequence() {
+            // Bei Runde 1: Neue Sequenz mit 3 Symbolen generieren
+            if (currentRound === 1) {
+                sequence = [];
+                for (let i = 0; i < 3; i++) {
+                    sequence.push(Math.floor(Math.random() * 5));
+                }
+            } else {
+                // Bei späteren Runden: Bestehende Sequenz behalten und ein neues Symbol hinzufügen
+                sequence.push(Math.floor(Math.random() * 5));
+            }
+            sequenceLengthDisplay.textContent = sequence.length;
+        }
+
+        async function showSequence() {
+            isShowingSequence = true;
+            isUserTurn = false;
+            startBtn.disabled = true;
+            resetBtn.disabled = true;
+            gameInfo.textContent = 'Merke dir die Sequenz...';
+            message.textContent = '';
+
+            // Alle Symbole deaktivieren
+            symbols.forEach(symbol => {
+                symbol.classList.add('disabled');
+            });
+
+            // Sequenz anzeigen
+            for (let i = 0; i < sequence.length; i++) {
+                await new Promise(resolve => setTimeout(resolve, 500));
+                const symbolIndex = sequence[i];
+                symbols[symbolIndex].classList.add('active');
+                
+                await new Promise(resolve => setTimeout(resolve, 800));
+                symbols[symbolIndex].classList.remove('active');
+            }
+
+            // Kurze Pause vor dem User-Turn
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            isShowingSequence = false;
+            isUserTurn = true;
+            userSequence = [];
+            gameInfo.textContent = 'Jetzt bist du dran! Klicke die Symbole in der richtigen Reihenfolge.';
+            
+            // Symbole aktivieren
+            symbols.forEach(symbol => {
+                symbol.classList.remove('disabled');
+            });
+        }
+
+        function handleSymbolClick(index) {
+            if (!isUserTurn || isShowingSequence) return;
+
+            userSequence.push(index);
+            const symbol = symbols[index];
+
+            // Visuelles Feedback
+            symbol.classList.add('active');
+            setTimeout(() => {
+                symbol.classList.remove('active');
+            }, 200);
+
+            // Prüfen ob die Sequenz korrekt ist
+            const currentIndex = userSequence.length - 1;
+            if (userSequence[currentIndex] !== sequence[currentIndex]) {
+                // Falsch!
+                symbol.classList.add('wrong');
+                setTimeout(() => {
+                    symbol.classList.remove('wrong');
+                }, 1000);
+                
+                message.textContent = '❌ Falsch! Versuche es nochmal!';
+                message.className = 'message error';
+                isUserTurn = false;
+                
+                setTimeout(() => {
+                    startBtn.disabled = false;
+                    resetBtn.disabled = true;
+                    gameInfo.textContent = 'Klicke auf "Spiel starten" für eine neue Runde!';
+                }, 1500);
+                return;
+            }
+
+            // Richtige Eingabe
+            symbol.classList.add('correct');
+            setTimeout(() => {
+                symbol.classList.remove('correct');
+            }, 300);
+
+            // Prüfen ob die komplette Sequenz korrekt ist
+            if (userSequence.length === sequence.length) {
+                // Gewonnen!
+                score++;
+                scoreDisplay.textContent = score;
+                message.textContent = '✅ Richtig! Gut gemacht!';
+                message.className = 'message success';
+                isUserTurn = false;
+                
+                setTimeout(() => {
+                    currentRound++;
+                    roundDisplay.textContent = currentRound;
+                    message.textContent = '';
+                    generateSequence();
+                    showSequence();
+                }, 1500);
+            }
+        }
+
+        // Event Listener für Symbole
+        symbols.forEach((symbol, index) => {
+            symbol.addEventListener('click', () => handleSymbolClick(index));
+        });
+    </script>
+</body>
+</html>
